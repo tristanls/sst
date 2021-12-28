@@ -53,7 +53,7 @@ func CountryIssuedPassport(s *sst.SST, person, location, passport string) {
 	countryHub := s.MustCreateNode("Hub", location, nil, 0)
 	personFrag := s.MustCreateNode("Fragment", person, nil, 0)
 	timeLimit := 1.0
-	sst.MustCreateAssociation(&sst.Association{
+	s.MustCreateAssociation(&sst.Association{
 		Key:          passport,
 		SemanticType: sst.Expresses,
 		Fwd:          "grants passport to",
@@ -74,7 +74,7 @@ func CountryIssuedVisa(s *sst.SST, person, location, visa string) {
 	countryHub := s.MustCreateNode("Hub", location, nil, 0)
 	personFrag := s.MustCreateNode("Fragment", person, nil, 0)
 	timeLimit := 1.0
-	sst.MustCreateAssociation(&sst.Association{
+	s.MustCreateAssociation(&sst.Association{
 		Key:          visa,
 		SemanticType: sst.Expresses,
 		Fwd:          "grants visa to",

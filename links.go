@@ -107,7 +107,7 @@ type linkOp func(incumbent, candidate float64) (weight float64, noop bool)
 // linkOp creates the link or executes the designated operation on the existing link
 func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool, op linkOp) error {
 	relKey := toDocumentKey(rel)
-	semantics := associations[relKey]
+	semantics := s.associations[relKey]
 	if semantics == nil {
 		return errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
 	}
@@ -119,7 +119,7 @@ func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool
 		Negate: negate,
 	}
 	key := toDocumentKey(link.From + link.SID + link.To)
-	association := associations[link.SID]
+	association := s.associations[link.SID]
 	if association == nil {
 		return errors.New(fmt.Sprintf("sst: unknown link association: %v", link.SID))
 	}

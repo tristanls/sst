@@ -16,22 +16,6 @@ var (
 )
 
 func main() {
-	sst.MustCreateAssociation(&sst.Association{
-		Key:          "happened_in",
-		SemanticType: sst.Follows,
-		Fwd:          "happened in",
-		Bwd:          "was the location of",
-		Nfwd:         "did not happen in",
-		Nbwd:         "was not the location of",
-	})
-	sst.MustCreateAssociation(&sst.Association{
-		Key:          "involved",
-		SemanticType: sst.Follows,
-		Fwd:          "involved",
-		Bwd:          "was involved in",
-		Nfwd:         "did not involve",
-		Nbwd:         "was not involved in",
-	})
 	config := &sst.Config{
 		Name:            "nation_spacetime_2",
 		NodeCollections: []string{string(Location), string(Country), string(Person), string(Event)},
@@ -43,6 +27,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	s.MustCreateAssociation(&sst.Association{
+		Key:          "happened_in",
+		SemanticType: sst.Follows,
+		Fwd:          "happened in",
+		Bwd:          "was the location of",
+		Nfwd:         "did not happen in",
+		Nbwd:         "was not the location of",
+	})
+	s.MustCreateAssociation(&sst.Association{
+		Key:          "involved",
+		SemanticType: sst.Follows,
+		Fwd:          "involved",
+		Bwd:          "was involved in",
+		Nfwd:         "did not involve",
+		Nbwd:         "was not involved in",
+	})
 
 	mb1 := CreatePerson(s, "markburgess_osl", "Professor Mark Burgess", 123456, 0)
 	mb2 := CreatePerson(s, "Professor Burgess", "Professor Mark Burgess", 123456, 0)
@@ -139,7 +139,7 @@ func CountryIssuedPassport(s *sst.SST, person, country, passport string) {
 	ctry := CreateCountry(s, country, "")
 	prsn := CreatePerson(s, person, "", 0, 0)
 	timeLimit := 1.0
-	sst.MustCreateAssociation(&sst.Association{
+	s.MustCreateAssociation(&sst.Association{
 		Key:          passport,
 		SemanticType: sst.Expresses,
 		Fwd:          "grants passport to",
@@ -160,7 +160,7 @@ func CountryIssuedVisa(s *sst.SST, person, country, visa string) {
 	ctry := CreateCountry(s, country, "")
 	prsn := CreatePerson(s, person, "", 0, 0)
 	timeLimit := 1.0
-	sst.MustCreateAssociation(&sst.Association{
+	s.MustCreateAssociation(&sst.Association{
 		Key:          visa,
 		SemanticType: sst.Expresses,
 		Fwd:          "grants visa to",
