@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"strings"
+	"reflect"
 
 	arango "github.com/arangodb/go-driver"
 	"github.com/pkg/errors"
@@ -14,8 +14,8 @@ import (
 type Node struct {
 	// Key is a mandatory field - short name
 	Key string `json:"_key"`
-	// Data is longer Node description or bulk string data
-	Data string `json:"data"`
+	// Data is an arbitrary key value data structure serializable to JSON
+	Data map[string]interface{} `json:"data"`
 	// Prefix designates node collection origin
 	Prefix string
 	// Weight is the importance rank
@@ -23,13 +23,13 @@ type Node struct {
 }
 
 // CreateNode idempotently creates a node of the specified kind
-func (s *SST) CreateNode(short, description, kind string, weight float64) (*Node, error) {
-	return s.createNode(short, description, kind+"/", weight)
+func (s *SST) CreateNode(kind, key string, data map[string]interface{}, weight float64) (*Node, error) {
+	return s.createNode(kind+"/", key, data, weight)
 }
 
 // MustCreateNode idempotently creates a node of the specified kind, panics on error
-func (s *SST) MustCreateNode(short, description, kind string, weight float64) *Node {
-	node, err := s.CreateNode(short, description, kind, weight)
+func (s *SST) MustCreateNode(kind string, key string, data map[string]interface{}, weight float64) *Node {
+	node, err := s.CreateNode(kind, key, data, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -37,28 +37,28 @@ func (s *SST) MustCreateNode(short, description, kind string, weight float64) *N
 }
 
 // GetNodeData retrieves data of the node for designated key
-func (s *SST) GetNodeData(key string) (string, error) {
+func (s *SST) GetNodeData(key string) (map[string]interface{}, error) {
 	prefix := path.Dir(key)
 	rawkey := path.Base(key)
 
 	col, err := s.collectionOf(prefix + "/") // TODO: verify this works
 	if err != nil {
-		return "", errors.Wrapf(err, "sst: failed to get node collection for key: %v", key)
+		return nil, errors.Wrapf(err, "sst: failed to get node collection for key: %v", key)
 	}
 
 	var node Node
 	_, err = col.ReadDocument(context.TODO(), rawkey, &node)
 	if err != nil {
-		return "", errors.Wrapf(err, "sst: failed to get node for key: %v", key)
+		return nil, errors.Wrapf(err, "sst: failed to get node for key: %v", key)
 	}
 	return node.Data, nil
 }
 
 // createNode idempotently creates node with the designated prefix
-func (s *SST) createNode(short, description, prefix string, weight float64) (*Node, error) {
+func (s *SST) createNode(prefix string, key string, data map[string]interface{}, weight float64) (*Node, error) {
 	node := &Node{
-		Data:   strings.Trim(description, "\n "),
-		Key:    toDocumentKey(short),
+		Data:   data,
+		Key:    toDocumentKey(key),
 		Prefix: prefix,
 		Weight: weight,
 	}
@@ -85,7 +85,7 @@ func (s *SST) insertNode(node *Node) error {
 			return errors.Wrapf(err, "sst: failed to create node: %v", node)
 		}
 	} else {
-		if node.Data == "" && node.Weight == 0.0 {
+		if node.Data == nil && node.Weight == 0.0 {
 			return nil // Do not update the node if there is no data to enter
 		}
 		var existing Node
@@ -93,7 +93,7 @@ func (s *SST) insertNode(node *Node) error {
 		if err != nil {
 			return errors.Wrapf(err, "sst: failed to read node: %v", node.Key)
 		}
-		if existing != *node {
+		if existing.Weight != node.Weight || !reflect.DeepEqual(existing.Data, node.Data) {
 			_, err := nodes.UpdateDocument(context.TODO(), node.Key, node)
 			if err != nil {
 				return errors.Wrapf(err, "sst: failed to update node: %v", node)

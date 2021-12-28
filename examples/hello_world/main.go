@@ -21,11 +21,11 @@ func main() {
 		panic(err)
 	}
 
-	node1, err := spacetime.CreateNode("node1", "node1", "Node", 1.0)
+	node1, err := spacetime.CreateNode("Node", "node1", map[string]interface{}{"description": "node1"}, 1.0)
 	if err != nil {
 		panic(err)
 	}
-	node2, err := spacetime.CreateNode("node2", "node2", "Node", 1.0)
+	node2, err := spacetime.CreateNode("Node", "node2", map[string]interface{}{"description": "node2"}, 1.0)
 	if err != nil {
 		panic(err)
 	}
