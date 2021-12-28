@@ -114,7 +114,7 @@ func LocationCountry(s *sst.SST, location, country string) {
 	loc := CreateLocation(s, location, "")
 	c := CreateCountry(s, country, "")
 
-	s.CreateLink(c, "contains", loc, 1)
+	s.MustCreateLink(c, "contains", loc, 1)
 
 	fmt.Println("Location: ", loc.Key, "is in", country)
 }
@@ -128,8 +128,8 @@ func PersonLocation(s *sst.SST, person, location string) {
 
 	minihub := CreateEvent(s, short, long)
 
-	s.CreateLink(minihub, "happened_in", loc, 1)
-	s.CreateLink(minihub, "involved", prsn, 1)
+	s.MustCreateLink(minihub, "happened_in", loc, 1)
+	s.MustCreateLink(minihub, "involved", prsn, 1)
 
 	s.MustNextEvent(string(Event), short, map[string]interface{}{"description": long})
 	fmt.Println("Timeline: " + short)
