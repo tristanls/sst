@@ -110,27 +110,6 @@ var (
 		"connected":       {"connected", Near, "is connected to", "is connected to", "is not connected to", "is not connected to"},
 		"coactive":        {"coactive", Near, "occurred together with", "occurred together with", "never appears with", "never appears with"},
 	}
-
-	EdgesNear = arango.EdgeDefinition{
-		Collection: "Near",
-		From:       []string{"Nodes", "Hubs", "Fragments"},
-		To:         []string{"Nodes", "Hubs", "Fragments"},
-	}
-	EdgesFollows = arango.EdgeDefinition{
-		Collection: "Follows",
-		From:       []string{"Nodes", "Hubs", "Fragments"},
-		To:         []string{"Nodes", "Hubs", "Fragments"},
-	}
-	EdgesContains = arango.EdgeDefinition{
-		Collection: "Contains",
-		From:       []string{"Nodes", "Hubs", "Fragments"},
-		To:         []string{"Nodes", "Hubs", "Fragments"},
-	}
-	EdgesExpresses = arango.EdgeDefinition{
-		Collection: "Expresses",
-		From:       []string{"Nodes", "Hubs"},
-		To:         []string{"Nodes", "Hubs"},
-	}
 )
 
 var (
