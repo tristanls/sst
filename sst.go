@@ -13,9 +13,7 @@ import (
 )
 
 var (
-	databaseAlreadyExists = errors.New("sst: database already exists")
-	databaseDoesNotExist  = errors.New("sst: database does not exist")
-	startEvent            = &Node{Key: "start"}
+	startEvent = &Node{Key: "start"}
 )
 
 type Config struct {

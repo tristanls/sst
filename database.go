@@ -7,6 +7,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	databaseAlreadyExists = errors.New("sst: database already exists")
+	databaseDoesNotExist  = errors.New("sst: database does not exist")
+)
+
 // createDatabase creates a new ArangoDB database if it does not exist.
 func (s *SST) createDatabase(name string) (arango.Database, error) {
 	ctx := context.Background()
