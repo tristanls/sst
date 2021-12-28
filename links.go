@@ -92,7 +92,7 @@ func (s *SST) addLink(c1 *Node, rel string, c2 *Node, weight float64, negate boo
 // addLinkOp determines link weight when adding a link. Returns weight and noop flag.
 func addLinkOp(incumbent, candidate float64) (float64, bool) {
 	if candidate < 0 || incumbent == candidate {
-		return candidate, true
+		return 0, true
 	}
 	return candidate, false
 }
