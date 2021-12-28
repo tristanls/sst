@@ -4,6 +4,7 @@ package sst
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	arango "github.com/arangodb/go-driver"
@@ -85,7 +86,7 @@ type Association struct {
 }
 
 var (
-	Associations = map[string]*Association{
+	associations = map[string]*Association{
 		"contains":        {"contains", Contains, "contains", "belongs to or is part of", "does not contain", "is not part of"},
 		"generalizes":     {"generalizes", Contains, "generalizes", "is a special case of", "is not a generalization of", "is not a special case of"},
 		"part_of":         {"part_of", -Contains, "is part of", "incorporates", "is not part of", "doesn't incorporate"},
@@ -218,4 +219,30 @@ func NewSST(config *Config) (*SST, error) {
 	sst.prevEvents = []*Node{startEvent}
 
 	return sst, nil
+}
+
+// CreateAssociation creates a new association
+func CreateAssociation(a *Association) error {
+	a.Key = toDocumentKey(a.Key)
+	existing := associations[a.Key]
+	if existing == nil {
+		associations[a.Key] = a
+		return nil
+	}
+	if existing == a {
+		return nil
+	}
+	return errors.New(fmt.Sprintf("sst: failed to create association %v due to existing association %v", a, existing))
+}
+
+// MustCreateAssociation creates a new association, panics on error
+func MustCreateAssociation(a *Association) {
+	err := CreateAssociation(a)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func toDocumentKey(s string) string {
+	return keyRegex.ReplaceAllString(s, "_")
 }

@@ -27,14 +27,41 @@ func (s *SST) CreateFragment(short, description string, weight float64) (*Node, 
 	return s.createNode(short, description, "Fragments/", weight)
 }
 
+// MustCreateFragment idempotently creates a Fragment node, panics on error
+func (s *SST) MustCreateFragment(short, description string, weight float64) *Node {
+	frag, err := s.CreateFragment(short, description, weight)
+	if err != nil {
+		panic(err)
+	}
+	return frag
+}
+
 // CreateNode idempotently creates a Node node
 func (s *SST) CreateNode(short, description string, weight float64) (*Node, error) {
 	return s.createNode(short, description, "Nodes/", weight)
 }
 
+// MustCreateNode idempotently creates a Node node, panics on error
+func (s *SST) MustCreateNode(short, description string, weight float64) *Node {
+	node, err := s.CreateNode(short, description, weight)
+	if err != nil {
+		panic(err)
+	}
+	return node
+}
+
 // CreateHub idempotently creates a Hub node
 func (s *SST) CreateHub(short, description string, weight float64) (*Node, error) {
 	return s.createNode(short, description, "Hubs/", weight)
+}
+
+// MustCreateHub idempotently creates a Hub node, panics on error
+func (s *SST) MustCreateHub(short, description string, weight float64) *Node {
+	node, err := s.CreateHub(short, description, weight)
+	if err != nil {
+		panic(err)
+	}
+	return node
 }
 
 // GetNodeData retrieves data of the node for designated key
@@ -59,7 +86,7 @@ func (s *SST) GetNodeData(key string) (string, error) {
 func (s *SST) createNode(short, description, prefix string, weight float64) (*Node, error) {
 	node := &Node{
 		Data:   strings.Trim(description, "\n "),
-		Key:    short,
+		Key:    toDocumentKey(short),
 		Prefix: prefix,
 		Weight: weight,
 	}

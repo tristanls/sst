@@ -11,6 +11,15 @@ func (s *SST) NextEvent(short, data string) (*Node, error) {
 	return nodes[0], nil
 }
 
+// MustNextEvent creates a singular next event, but panics on error.
+func (s *SST) MustNextEvent(short, data string) *Node {
+	node, err := s.NextEvent(short, data)
+	if err != nil {
+		panic(err)
+	}
+	return node
+}
+
 // NextEvents creates a set of next parallel events.
 func (s *SST) NextEvents(shorts, data []string) ([]*Node, error) {
 	newset := make([]*Node, 0)
@@ -35,6 +44,15 @@ func (s *SST) NextEvents(shorts, data []string) ([]*Node, error) {
 	s.prevEvents = newset
 
 	return newset, nil
+}
+
+// MustNextEvents creates a set of next parallel events, but panics on error.
+func (s *SST) MustNextEvents(shorts, data []string) []*Node {
+	nodes, err := s.NextEvents(shorts, data)
+	if err != nil {
+		panic(err)
+	}
+	return nodes
 }
 
 // PreviousEvents returns the previous events

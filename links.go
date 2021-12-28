@@ -30,16 +30,40 @@ func (s *SST) BlockLink(c1 *Node, rel string, c2 *Node, weight float64) error {
 	return s.addLink(c1, rel, c2, weight, true)
 }
 
+// MustBlockLink invokes BlockLink, but panics on error
+func (s *SST) MustBlockLink(c1 *Node, rel string, c2 *Node, weight float64) {
+	err := s.BlockLink(c1, rel, c2, weight)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // CreateLink creates the link if it does not exist or updates existing link
 // with the new weight.
 func (s *SST) CreateLink(c1 *Node, rel string, c2 *Node, weight float64) error {
 	return s.addLink(c1, rel, c2, weight, false)
 }
 
+// MustCreateLink invokes CreateLink, but panics on error
+func (s *SST) MustCreateLink(c1 *Node, rel string, c2 *Node, weight float64) {
+	err := s.CreateLink(c1, rel, c2, weight)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // IncrementLink creates the link with weight 1.0 if it does not exist or increments
 // the weight of existing link by 1.0.
 func (s *SST) IncrementLink(c1 *Node, rel string, c2 *Node) error {
 	return s.linkOp(c1, rel, c2, 0.0, false, incrLinkOp)
+}
+
+// MustIncrementLink invokes IncrementLink, but panics on error
+func (s *SST) MustIncrementLink(c1 *Node, rel string, c2 *Node) {
+	err := s.IncrementLink(c1, rel, c2)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // linksOf identifies links collection based on SemanticType needed
@@ -82,19 +106,20 @@ type linkOp func(incumbent, candidate float64) (weight float64, noop bool)
 
 // linkOp creates the link or executes the designated operation on the existing link
 func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool, op linkOp) error {
-	semantics := Associations[rel]
+	relKey := toDocumentKey(rel)
+	semantics := associations[relKey]
 	if semantics == nil {
-		return errors.New(fmt.Sprintf("sst: invalid link type: %v", rel))
+		return errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
 	}
 	link := &Link{
-		From:   c1.Prefix + keyRegex.ReplaceAllString(c1.Key, "_"),
-		To:     c2.Prefix + keyRegex.ReplaceAllString(c2.Key, "_"),
+		From:   c1.Prefix + toDocumentKey(c1.Key),
+		To:     c2.Prefix + toDocumentKey(c2.Key),
 		SID:    semantics.Key,
 		Weight: weight,
 		Negate: negate,
 	}
-	key := keyRegex.ReplaceAllString(link.From+link.SID+link.To, "_")
-	association := Associations[link.SID]
+	key := toDocumentKey(link.From + link.SID + link.To)
+	association := associations[link.SID]
 	if association == nil {
 		return errors.New(fmt.Sprintf("sst: unknown link association: %v", link.SID))
 	}
