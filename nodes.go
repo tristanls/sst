@@ -16,48 +16,20 @@ type Node struct {
 	Key string `json:"_key"`
 	// Data is longer Node description or bulk string data
 	Data string `json:"data"`
-	// Prefix designates collection origin, e.g.: Hub, Node, Fragment
+	// Prefix designates node collection origin
 	Prefix string
 	// Weight is the importance rank
 	Weight float64 `json:"weight"`
 }
 
-// CreateFragment idempotently creates a Fragment node
-func (s *SST) CreateFragment(short, description string, weight float64) (*Node, error) {
-	return s.createNode(short, description, "Fragments/", weight)
+// CreateNode idempotently creates a node of the specified kind
+func (s *SST) CreateNode(short, description, kind string, weight float64) (*Node, error) {
+	return s.createNode(short, description, kind+"/", weight)
 }
 
-// MustCreateFragment idempotently creates a Fragment node, panics on error
-func (s *SST) MustCreateFragment(short, description string, weight float64) *Node {
-	frag, err := s.CreateFragment(short, description, weight)
-	if err != nil {
-		panic(err)
-	}
-	return frag
-}
-
-// CreateNode idempotently creates a Node node
-func (s *SST) CreateNode(short, description string, weight float64) (*Node, error) {
-	return s.createNode(short, description, "Nodes/", weight)
-}
-
-// MustCreateNode idempotently creates a Node node, panics on error
-func (s *SST) MustCreateNode(short, description string, weight float64) *Node {
-	node, err := s.CreateNode(short, description, weight)
-	if err != nil {
-		panic(err)
-	}
-	return node
-}
-
-// CreateHub idempotently creates a Hub node
-func (s *SST) CreateHub(short, description string, weight float64) (*Node, error) {
-	return s.createNode(short, description, "Hubs/", weight)
-}
-
-// MustCreateHub idempotently creates a Hub node, panics on error
-func (s *SST) MustCreateHub(short, description string, weight float64) *Node {
-	node, err := s.CreateHub(short, description, weight)
+// MustCreateNode idempotently creates a node of the specified kind, panics on error
+func (s *SST) MustCreateNode(short, description, kind string, weight float64) *Node {
+	node, err := s.CreateNode(short, description, kind, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -66,10 +38,10 @@ func (s *SST) MustCreateHub(short, description string, weight float64) *Node {
 
 // GetNodeData retrieves data of the node for designated key
 func (s *SST) GetNodeData(key string) (string, error) {
-	scale := path.Dir(key)
+	prefix := path.Dir(key)
 	rawkey := path.Base(key)
 
-	col, err := s.collectionOf(scale)
+	col, err := s.collectionOf(prefix + "/") // TODO: verify this works
 	if err != nil {
 		return "", errors.Wrapf(err, "sst: failed to get node collection for key: %v", key)
 	}
@@ -131,15 +103,11 @@ func (s *SST) insertNode(node *Node) error {
 	return nil
 }
 
-// collectionOf identifies node collection based on scale needed
-func (s *SST) collectionOf(scale string) (arango.Collection, error) {
-	switch scale {
-	case "Hubs/":
-		return s.hubs, nil
-	case "Nodes/":
-		return s.nodes, nil
-	case "Fragments/":
-		return s.frags, nil
+// collectionOf identifies node collection based on node prefix
+func (s *SST) collectionOf(prefix string) (arango.Collection, error) {
+	col := s.nodes[prefix[:len(prefix)-1]]
+	if col == nil {
+		return nil, errors.New(fmt.Sprintf("sst: no node collection for prefix: %v", prefix))
 	}
-	return nil, errors.New(fmt.Sprintf("sst: no node collection for scale: %v", scale))
+	return col, nil
 }

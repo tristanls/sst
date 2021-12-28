@@ -8,10 +8,11 @@ import (
 
 func main() {
 	config := &sst.Config{
-		Name:     "nation_spacetime",
-		Password: "",
-		URL:      "http://localhost:8529",
-		Username: "root",
+		Name:            "nation_spacetime",
+		NodeCollections: []string{"Node", "Fragment", "Hub"},
+		Password:        "",
+		URL:             "http://localhost:8529",
+		Username:        "root",
 	}
 	s, err := sst.NewSST(config)
 	if err != nil {
@@ -28,8 +29,8 @@ func main() {
 	PersonLocation(s, "Professor Burgess", "USA")
 	PersonLocation(s, "Professor Burgess", "UK")
 
-	paris := s.MustCreateHub("Paris", "Paris, capital city of France", 1)
-	france := s.MustCreateHub("France", "France, country in Europe", 100)
+	paris := s.MustCreateNode("Paris", "Paris, capital city of France", "Hub", 1)
+	france := s.MustCreateNode("France", "France, country in Europe", "Hub", 100)
 
 	CountryIssuedVisa(s, "Emily", "France", "Schengen work visa")
 	PersonLocation(s, "Emily", "Paris")
@@ -42,15 +43,15 @@ func main() {
 }
 
 func PersonLocation(s *sst.SST, person, location string) {
-	s.MustCreateFragment(person, person, 0)
-	s.MustCreateHub(location, "", 0)
-	s.MustNextEvent(person+" in "+location, person+" observed in "+location)
+	s.MustCreateNode(person, person, "Fragment", 0)
+	s.MustCreateNode(location, "", "Hub", 0)
+	s.MustNextEvent(person+" in "+location, person+" observed in "+location, "Node")
 	fmt.Println("Timeline: " + person + " in " + location)
 }
 
 func CountryIssuedPassport(s *sst.SST, person, location, passport string) {
-	countryHub := s.MustCreateHub(location, "", 0)
-	personFrag := s.MustCreateFragment(person, "", 0)
+	countryHub := s.MustCreateNode(location, "", "Hub", 0)
+	personFrag := s.MustCreateNode(person, "", "Fragment", 0)
 	timeLimit := 1.0
 	sst.MustCreateAssociation(&sst.Association{
 		Key:          passport,
@@ -61,13 +62,13 @@ func CountryIssuedPassport(s *sst.SST, person, location, passport string) {
 		Nbwd:         "does not hold passport from",
 	})
 	s.MustCreateLink(countryHub, passport, personFrag, timeLimit)
-	s.MustNextEvent(location+" grants "+passport+" to "+person, location+" granted passport "+passport+" to "+person)
+	s.MustNextEvent(location+" grants "+passport+" to "+person, location+" granted passport "+passport+" to "+person, "Node")
 	fmt.Println("Timeline: " + location + " granted passport " + passport + " to " + person)
 }
 
 func CountryIssuedVisa(s *sst.SST, person, location, visa string) {
-	countryHub := s.MustCreateHub(location, "", 0)
-	personFrag := s.MustCreateFragment(person, "", 0)
+	countryHub := s.MustCreateNode(location, "", "Hub", 0)
+	personFrag := s.MustCreateNode(person, "", "Fragment", 0)
 	timeLimit := 1.0
 	sst.MustCreateAssociation(&sst.Association{
 		Key:          visa,
@@ -78,6 +79,6 @@ func CountryIssuedVisa(s *sst.SST, person, location, visa string) {
 		Nbwd:         "does not hold visa from",
 	})
 	s.MustCreateLink(countryHub, visa, personFrag, timeLimit)
-	s.MustNextEvent(location+" grants "+visa+" to "+person, location+" granted visa "+visa+" to "+person)
+	s.MustNextEvent(location+" grants "+visa+" to "+person, location+" granted visa "+visa+" to "+person, "Node")
 	fmt.Println("Timeline: " + location + " granted visa " + visa + " to " + person)
 }

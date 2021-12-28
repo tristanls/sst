@@ -19,10 +19,12 @@ var (
 )
 
 type Config struct {
-	Name     string
-	Password string
-	URL      string
-	Username string
+	Name string
+	// NodeCollections are the names of node collections to instantiate for this SST
+	NodeCollections []string
+	Password        string
+	URL             string
+	Username        string
 }
 
 type SST struct {
@@ -33,9 +35,7 @@ type SST struct {
 	graph  arango.Graph
 	name   string
 
-	frags arango.Collection
-	nodes arango.Collection
-	hubs  arango.Collection
+	nodes map[string]arango.Collection
 
 	follows   arango.Collection
 	contains  arango.Collection
@@ -179,24 +179,24 @@ func NewSST(config *Config) (*SST, error) {
 	} else {
 		sst.graph, err = sst.db.CreateGraph(context.TODO(), sst.name, &arango.CreateGraphOptions{
 			OrphanVertexCollections: []string{"Disconnected"},
-			EdgeDefinitions:         []arango.EdgeDefinition{EdgesNear, EdgesFollows, EdgesContains, EdgesExpresses},
+			EdgeDefinitions: []arango.EdgeDefinition{
+				{Collection: "Near", From: sst.config.NodeCollections, To: sst.config.NodeCollections},
+				{Collection: "Follows", From: sst.config.NodeCollections, To: sst.config.NodeCollections},
+				{Collection: "Contains", From: sst.config.NodeCollections, To: sst.config.NodeCollections},
+				{Collection: "Expresses", From: sst.config.NodeCollections, To: sst.config.NodeCollections},
+			},
 		})
 		if err != nil {
 			return nil, errors.Wrapf(err, "sst: failed to create graph: %v", sst.name)
 		}
 	}
 
-	sst.frags, err = sst.graph.VertexCollection(nil, "Fragments")
-	if err != nil {
-		return nil, errors.Wrap(err, "sst: failed to create Fragments vertex collection")
-	}
-	sst.nodes, err = sst.graph.VertexCollection(nil, "Nodes")
-	if err != nil {
-		return nil, errors.Wrap(err, "sst: failed to create Nodes vertex collection")
-	}
-	sst.hubs, err = sst.graph.VertexCollection(nil, "Hubs")
-	if err != nil {
-		return nil, errors.Wrap(err, "sst: failed to create Hubs vertex collection")
+	sst.nodes = make(map[string]arango.Collection)
+	for _, kind := range sst.config.NodeCollections {
+		sst.nodes[kind], err = sst.graph.VertexCollection(context.TODO(), kind)
+		if err != nil {
+			return nil, errors.Wrapf(err, "sst: failed to create %v vertex collection", kind)
+		}
 	}
 
 	sst.near, _, err = sst.graph.EdgeCollection(nil, "Near")
