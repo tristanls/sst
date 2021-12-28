@@ -4,6 +4,7 @@ package sst
 
 import (
 	"context"
+	"regexp"
 
 	arango "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
@@ -16,17 +17,17 @@ var (
 	startEvent            = &Node{Key: "start"}
 )
 
-type SSTConfig struct {
-	name     string
-	password string
-	url      string
-	username string
+type Config struct {
+	Name     string
+	Password string
+	URL      string
+	Username string
 }
 
 type SST struct {
 	db     arango.Database
 	client arango.Client
-	config *SSTConfig
+	config *Config
 	conn   arango.Connection
 	graph  arango.Graph
 	name   string
@@ -131,14 +132,18 @@ var (
 	}
 )
 
-// Creates new Semantic Spactime model backed by ArangoDB
-func NewSST(config *SSTConfig) (*SST, error) {
+var (
+	keyRegex = regexp.MustCompile(`[^a-zA-Z0-9_:.@()+,=;$!*'%-]`)
+)
+
+// Creates new Semantic Spacetime model backed by ArangoDB
+func NewSST(config *Config) (*SST, error) {
 	sst := &SST{
 		config: config,
 		name:   "semantic_spacetime",
 	}
 	conn, err := http.NewConnection(http.ConnectionConfig{
-		Endpoints: []string{config.url},
+		Endpoints: []string{config.URL},
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "sst: failed to create ArangoDB connection")
@@ -146,33 +151,32 @@ func NewSST(config *SSTConfig) (*SST, error) {
 	sst.conn = conn
 	client, err := arango.NewClient(arango.ClientConfig{
 		Connection:     sst.conn,
-		Authentication: arango.BasicAuthentication(config.username, config.password),
+		Authentication: arango.BasicAuthentication(config.Username, config.Password),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "sst: failed to create ArangoDB client")
 	}
 	sst.client = client
 
-	sst.db, err = sst.OpenDatabase(sst.config.name)
+	sst.db, err = sst.openDatabase(sst.config.Name)
 	if err == databaseDoesNotExist {
-		sst.db, err = sst.CreateDatabase(sst.config.name)
+		sst.db, err = sst.createDatabase(sst.config.Name)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := context.Background()
-	exists, err := sst.db.GraphExists(ctx, sst.name)
+	exists, err := sst.db.GraphExists(context.TODO(), sst.name)
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		sst.graph, err = sst.db.Graph(ctx, sst.name)
+		sst.graph, err = sst.db.Graph(context.TODO(), sst.name)
 		if err != nil {
 			return nil, errors.Wrapf(err, "sst: failed to open graph: %v", sst.name)
 		}
 	} else {
-		sst.graph, err = sst.db.CreateGraph(ctx, sst.name, &arango.CreateGraphOptions{
+		sst.graph, err = sst.db.CreateGraph(context.TODO(), sst.name, &arango.CreateGraphOptions{
 			OrphanVertexCollections: []string{"Disconnected"},
 			EdgeDefinitions:         []arango.EdgeDefinition{EdgesNear, EdgesFollows, EdgesContains, EdgesExpresses},
 		})
@@ -194,19 +198,19 @@ func NewSST(config *SSTConfig) (*SST, error) {
 		return nil, errors.Wrap(err, "sst: failed to create Hubs vertex collection")
 	}
 
-	sst.near, err = sst.graph.VertexCollection(nil, "Near")
+	sst.near, _, err = sst.graph.EdgeCollection(nil, "Near")
 	if err != nil {
 		return nil, errors.Wrap(err, "sst: failed to create Near vertex collection")
 	}
-	sst.follows, err = sst.graph.VertexCollection(nil, "Follows")
+	sst.follows, _, err = sst.graph.EdgeCollection(nil, "Follows")
 	if err != nil {
 		return nil, errors.Wrap(err, "sst: failed to create Follows vertex collection")
 	}
-	sst.contains, err = sst.graph.VertexCollection(nil, "Contains")
+	sst.contains, _, err = sst.graph.EdgeCollection(nil, "Contains")
 	if err != nil {
 		return nil, errors.Wrap(err, "sst: failed to create Contains vertex collection")
 	}
-	sst.expresses, err = sst.graph.VertexCollection(nil, "Expresses")
+	sst.expresses, _, err = sst.graph.EdgeCollection(nil, "Expresses")
 	if err != nil {
 		return nil, errors.Wrap(err, "sst: failed to create Expresses vertex collection")
 	}

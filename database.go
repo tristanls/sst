@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CreateDatabase creates a new ArangoDB database if it does not exist.
-func (s *SST) CreateDatabase(name string) (arango.Database, error) {
+// createDatabase creates a new ArangoDB database if it does not exist.
+func (s *SST) createDatabase(name string) (arango.Database, error) {
 	ctx := context.Background()
 	exists, err := s.client.DatabaseExists(ctx, name)
 	if err != nil {
@@ -24,8 +24,8 @@ func (s *SST) CreateDatabase(name string) (arango.Database, error) {
 	return db, nil
 }
 
-// OpenDatabase opens an ArangoDB database if it exists.
-func (s *SST) OpenDatabase(name string) (arango.Database, error) {
+// openDatabase opens an ArangoDB database if it exists.
+func (s *SST) openDatabase(name string) (arango.Database, error) {
 	ctx := context.Background()
 	exists, err := s.client.DatabaseExists(ctx, name)
 	if err != nil {

@@ -3,7 +3,6 @@ package sst
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	arango "github.com/arangodb/go-driver"
 	"github.com/pkg/errors"
@@ -88,14 +87,13 @@ func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool
 		return errors.New(fmt.Sprintf("sst: invalid link type: %v", rel))
 	}
 	link := &Link{
-		From:   c1.Prefix + strings.ReplaceAll(c1.Key, " ", "_"),
-		To:     c2.Prefix + strings.ReplaceAll(c2.Key, " ", "_"),
+		From:   c1.Prefix + keyRegex.ReplaceAllString(c1.Key, "_"),
+		To:     c2.Prefix + keyRegex.ReplaceAllString(c2.Key, "_"),
 		SID:    semantics.Key,
 		Weight: weight,
 		Negate: negate,
 	}
-	description := link.From + link.SID + link.To
-	key := "key_" + description
+	key := keyRegex.ReplaceAllString(link.From+link.SID+link.To, "_")
 	association := Associations[link.SID]
 	if association == nil {
 		return errors.New(fmt.Sprintf("sst: unknown link association: %v", link.SID))
