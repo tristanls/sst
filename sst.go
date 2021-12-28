@@ -40,7 +40,6 @@ type SST struct {
 	expresses arango.Collection
 	near      arango.Collection
 
-	prevEvent  *Node
 	prevEvents []*Node
 }
 
@@ -212,7 +211,7 @@ func NewSST(config *SSTConfig) (*SST, error) {
 		return nil, errors.Wrap(err, "sst: failed to create Expresses vertex collection")
 	}
 
-	sst.prevEvent = startEvent
+	sst.prevEvents = []*Node{startEvent}
 
 	return sst, nil
 }
