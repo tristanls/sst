@@ -58,7 +58,7 @@ func (s *SST) GetNodeData(key string) (map[string]interface{}, error) {
 func (s *SST) createNode(prefix string, key string, data map[string]interface{}, weight float64) (*Node, error) {
 	node := &Node{
 		Data:   data,
-		Key:    toDocumentKey(key),
+		Key:    ToDocumentKey(key),
 		Prefix: prefix,
 		Weight: weight,
 	}

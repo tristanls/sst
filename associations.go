@@ -76,7 +76,7 @@ var (
 
 // CreateAssociation creates a new association
 func (s *SST) CreateAssociation(a *Association) error {
-	a.Key = toDocumentKey(a.Key)
+	a.Key = ToDocumentKey(a.Key)
 	existing := s.associations[a.Key]
 	if existing == nil {
 		s.associations[a.Key] = a

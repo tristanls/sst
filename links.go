@@ -52,6 +52,33 @@ func (s *SST) MustCreateLink(c1 *Node, rel string, c2 *Node, weight float64) {
 	}
 }
 
+// DeleteLink deletes the link if it exists.
+func (s *SST) DeleteLink(c1 *Node, rel string, c2 *Node) error {
+	relKey := ToDocumentKey(rel)
+	association := s.associations[relKey]
+	if association == nil {
+		return errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
+	}
+	links, err := s.linksOf(association.SemanticType)
+	if err != nil {
+		return err
+	}
+	key := linkKey(linkFrom(c1), association.Key, linkTo(c2))
+	_, err = links.RemoveDocument(context.TODO(), key)
+	if !arango.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+// MustDeleteLink deletes the link if it exists, but panics on error.
+func (s *SST) MustDeleteLink(c1 *Node, rel string, c2 *Node) {
+	err := s.DeleteLink(c1, rel, c2)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // IncrementLink creates the link with weight 1.0 if it does not exist or increments
 // the weight of existing link by 1.0.
 func (s *SST) IncrementLink(c1 *Node, rel string, c2 *Node) error {
@@ -104,34 +131,38 @@ func incrLinkOp(incumbent, candidate float64) (float64, bool) {
 
 type linkOp func(incumbent, candidate float64) (weight float64, noop bool)
 
+func linkFrom(n *Node) string {
+	return n.Prefix + ToDocumentKey(n.Key)
+}
+func linkKey(from, sid, to string) string {
+	return ToDocumentKey(from + sid + to)
+}
+func linkTo(n *Node) string {
+	return linkFrom(n)
+}
+
 // linkOp creates the link or executes the designated operation on the existing link
 func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool, op linkOp) error {
-	relKey := toDocumentKey(rel)
-	semantics := s.associations[relKey]
-	if semantics == nil {
+	relKey := ToDocumentKey(rel)
+	association := s.associations[relKey]
+	if association == nil {
 		return errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
 	}
 	link := &Link{
-		From:   c1.Prefix + toDocumentKey(c1.Key),
-		To:     c2.Prefix + toDocumentKey(c2.Key),
-		SID:    semantics.Key,
+		From:   linkFrom(c1),
+		To:     linkTo(c2),
+		SID:    association.Key,
 		Weight: weight,
 		Negate: negate,
 	}
-	key := toDocumentKey(link.From + link.SID + link.To)
-	association := s.associations[link.SID]
-	if association == nil {
-		return errors.New(fmt.Sprintf("sst: unknown link association: %v", link.SID))
-	}
-	link.SID = association.Key
-	link.Key = key
+	link.Key = linkKey(link.From, link.SID, link.To)
 
 	links, err := s.linksOf(association.SemanticType)
 	if err != nil {
 		return err
 	}
 
-	exists, err := links.DocumentExists(context.TODO(), key)
+	exists, err := links.DocumentExists(context.TODO(), link.Key)
 	if err != nil {
 		return err
 	}
@@ -142,16 +173,16 @@ func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool
 		}
 	} else {
 		var existing Link
-		_, err := links.ReadDocument(context.TODO(), key, &existing)
+		_, err := links.ReadDocument(context.TODO(), link.Key, &existing)
 		if err != nil {
-			return errors.Wrapf(err, "sst: failed to read link: %v", key)
+			return errors.Wrapf(err, "sst: failed to read link: %v", link.Key)
 		}
 		weight, noop := op(existing.Weight, link.Weight)
 		if noop {
 			return nil
 		}
 		link.Weight = weight
-		_, err = links.UpdateDocument(context.TODO(), key, link)
+		_, err = links.UpdateDocument(context.TODO(), link.Key, link)
 		if err != nil {
 			return errors.Wrapf(err, "sst: failed to update link: %v", link)
 		}

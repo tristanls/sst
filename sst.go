@@ -144,6 +144,7 @@ func NewSST(config *Config) (*SST, error) {
 	return sst, nil
 }
 
-func toDocumentKey(s string) string {
+// ToDocumentKey replaces disallowed characters in key names with '_'.
+func ToDocumentKey(s string) string {
 	return keyRegex.ReplaceAllString(s, "_")
 }
