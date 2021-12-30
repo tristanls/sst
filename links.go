@@ -3,6 +3,7 @@ package sst
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	arango "github.com/arangodb/go-driver"
 	"github.com/pkg/errors"
@@ -16,6 +17,8 @@ var (
 // Link represents an edge of a Semantic Spacetime graph
 type Link struct {
 	// Key is a mandatory field - short name
+	// Key has a "+" prefix indicating a positive association, as in Forward and Backward
+	// key has a "-" prefix indicating a negative association, as in Not Forward and Not Backward
 	Key string `json:"_key"`
 	// From is a mandatory field for edges
 	From string `json:"_from"`
@@ -23,21 +26,21 @@ type Link struct {
 	To string `json:"_to"`
 	// SID is a semantic ID, matches Association.Key
 	SID string `json:"semantics"`
-	// Negate designates a negative association, as in Not Forward or Not Backward
-	Negate bool `json:"negation"`
+	// Data is an arbitrary key value data structure serializable to JSON
+	Data map[string]interface{} `json:"data,omitempty"`
 	// Weight is the importance rank
 	Weight float64 `json:"weight"`
 }
 
 // BlockLink creates the negation of the link if it does not exist or updates
 // existing negated link with the new weight.
-func (s *SST) BlockLink(from *Node, rel string, to *Node, weight float64) (*Link, error) {
-	return s.addLink(linkFrom(from), rel, linkTo(to), weight, true)
+func (s *SST) BlockLink(from *Node, rel string, to *Node, data map[string]interface{}, weight float64) (*Link, error) {
+	return s.addLink(linkFrom(from), rel, linkTo(to), data, weight, true)
 }
 
 // MustBlockLink invokes BlockLink, but panics on error
-func (s *SST) MustBlockLink(from *Node, rel string, to *Node, weight float64) *Link {
-	link, err := s.BlockLink(from, rel, to, weight)
+func (s *SST) MustBlockLink(from *Node, rel string, to *Node, data map[string]interface{}, weight float64) *Link {
+	link, err := s.BlockLink(from, rel, to, data, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -46,13 +49,13 @@ func (s *SST) MustBlockLink(from *Node, rel string, to *Node, weight float64) *L
 
 // BlockLinkByID creates the negation of link if it does not exist or updates
 // existing link negated with the new weight. It uses node IDs to designate link endpoints.
-func (s *SST) BlockLinkByID(fromID, rel, toID string, weight float64) (*Link, error) {
-	return s.addLink(fromID, rel, toID, weight, true)
+func (s *SST) BlockLinkByID(fromID, rel, toID string, data map[string]interface{}, weight float64) (*Link, error) {
+	return s.addLink(fromID, rel, toID, data, weight, true)
 }
 
 // MustBlockLinkByID invokes BlockLinkByID, but panics on error
-func (s *SST) MustBlockLinkByID(fromID, rel, toID string, weight float64) *Link {
-	link, err := s.BlockLinkByID(fromID, rel, toID, weight)
+func (s *SST) MustBlockLinkByID(fromID, rel, toID string, data map[string]interface{}, weight float64) *Link {
+	link, err := s.BlockLinkByID(fromID, rel, toID, data, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -61,13 +64,13 @@ func (s *SST) MustBlockLinkByID(fromID, rel, toID string, weight float64) *Link 
 
 // CreateLink creates the link if it does not exist or updates existing link
 // with the new weight.
-func (s *SST) CreateLink(from *Node, rel string, to *Node, weight float64) (*Link, error) {
-	return s.CreateLinkByID(linkFrom(from), rel, linkTo(to), weight)
+func (s *SST) CreateLink(from *Node, rel string, to *Node, data map[string]interface{}, weight float64) (*Link, error) {
+	return s.CreateLinkByID(linkFrom(from), rel, linkTo(to), data, weight)
 }
 
 // MustCreateLink invokes CreateLink, but panics on error
-func (s *SST) MustCreateLink(from *Node, rel string, to *Node, weight float64) *Link {
-	link, err := s.CreateLink(from, rel, to, weight)
+func (s *SST) MustCreateLink(from *Node, rel string, to *Node, data map[string]interface{}, weight float64) *Link {
+	link, err := s.CreateLink(from, rel, to, data, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -76,13 +79,13 @@ func (s *SST) MustCreateLink(from *Node, rel string, to *Node, weight float64) *
 
 // CreateLinkByID creates the link if it does not exist or updates existing link
 // with the new weight. It uses node IDs to designate link endpoints.
-func (s *SST) CreateLinkByID(fromID, rel, toID string, weight float64) (*Link, error) {
-	return s.addLink(fromID, rel, toID, weight, false)
+func (s *SST) CreateLinkByID(fromID, rel, toID string, data map[string]interface{}, weight float64) (*Link, error) {
+	return s.addLink(fromID, rel, toID, data, weight, false)
 }
 
 // MustCreateLinkByID invokes CreateLinkByID, but panics on error
-func (s *SST) MustCreateLinkByID(fromID, rel, toID string, weight float64) *Link {
-	link, err := s.CreateLinkByID(fromID, rel, toID, weight)
+func (s *SST) MustCreateLinkByID(fromID, rel, toID string, data map[string]interface{}, weight float64) *Link {
+	link, err := s.CreateLinkByID(fromID, rel, toID, data, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +93,7 @@ func (s *SST) MustCreateLinkByID(fromID, rel, toID string, weight float64) *Link
 }
 
 // DeleteLink deletes the link if it exists.
-func (s *SST) DeleteLink(from *Node, rel string, to *Node) error {
+func (s *SST) DeleteLink(from *Node, rel string, to *Node, negate bool) error {
 	relKey := ToDocumentKey(rel)
 	association := s.associations[relKey]
 	if association == nil {
@@ -100,7 +103,7 @@ func (s *SST) DeleteLink(from *Node, rel string, to *Node) error {
 	if err != nil {
 		return err
 	}
-	key := linkKey(linkFrom(from), association.Key, linkTo(to))
+	key := linkKey(linkFrom(from), association.Key, linkTo(to), negate)
 	_, err = links.RemoveDocument(context.TODO(), key)
 	if !arango.IsNotFound(err) {
 		return err
@@ -109,8 +112,8 @@ func (s *SST) DeleteLink(from *Node, rel string, to *Node) error {
 }
 
 // MustDeleteLink deletes the link if it exists, but panics on error.
-func (s *SST) MustDeleteLink(from *Node, rel string, to *Node) {
-	err := s.DeleteLink(from, rel, to)
+func (s *SST) MustDeleteLink(from *Node, rel string, to *Node, negate bool) {
+	err := s.DeleteLink(from, rel, to, negate)
 	if err != nil {
 		panic(err)
 	}
@@ -118,13 +121,13 @@ func (s *SST) MustDeleteLink(from *Node, rel string, to *Node) {
 
 // IncrementLink creates the link with weight 1.0 if it does not exist or increments
 // the weight of existing link by 1.0.
-func (s *SST) IncrementLink(from *Node, rel string, to *Node) (*Link, error) {
-	return s.linkOp(linkFrom(from), rel, linkTo(to), 0.0, false, incrLinkOp)
+func (s *SST) IncrementLink(from *Node, rel string, to *Node, data map[string]interface{}) (*Link, error) {
+	return s.linkOp(linkFrom(from), rel, linkTo(to), data, 0.0, false, incrLinkOp)
 }
 
 // MustIncrementLink invokes IncrementLink, but panics on error
-func (s *SST) MustIncrementLink(from *Node, rel string, to *Node) *Link {
-	link, err := s.IncrementLink(from, rel, to)
+func (s *SST) MustIncrementLink(from *Node, rel string, to *Node, data map[string]interface{}) *Link {
+	link, err := s.IncrementLink(from, rel, to, data)
 	if err != nil {
 		panic(err)
 	}
@@ -150,37 +153,41 @@ func (s *SST) linksOf(typ SemanticType) (arango.Collection, error) {
 }
 
 // addLink adds the link idempotently.
-func (s *SST) addLink(fromID, rel, toID string, weight float64, negate bool) (*Link, error) {
-	return s.linkOp(fromID, rel, toID, weight, negate, addLinkOp)
+func (s *SST) addLink(fromID, rel, toID string, data map[string]interface{}, weight float64, negate bool) (*Link, error) {
+	return s.linkOp(fromID, rel, toID, data, weight, negate, addLinkOp)
 }
 
-// addLinkOp determines link weight when adding a link. Returns weight and noop flag.
-func addLinkOp(incumbent, candidate float64) (float64, bool) {
-	if candidate < 0 || incumbent == candidate {
-		return 0, true
+// addLinkOp determines link when adding a link. Returns link with latest weight or latest data and noop flag.
+func addLinkOp(incumbent, candidate *Link) (*Link, bool) {
+	if candidate.Weight < 0 || incumbent.Weight == candidate.Weight || reflect.DeepEqual(incumbent.Data, candidate.Data) {
+		return nil, true
 	}
 	return candidate, false
 }
 
-// incrLinkOp determines link weight when incrementing a link
-func incrLinkOp(incumbent, candidate float64) (float64, bool) {
-	return incumbent + 1.0, false
+// incrLinkOp increments link weight when incrementing a link, and uses latest data if different from existing data.
+func incrLinkOp(incumbent, candidate *Link) (*Link, bool) {
+	candidate.Weight = incumbent.Weight + 1
+	return candidate, false
 }
 
-type linkOp func(incumbent, candidate float64) (weight float64, noop bool)
+type linkOp func(incumbent, candidate *Link) (link *Link, noop bool)
 
 func linkFrom(n *Node) string {
 	return n.Prefix + ToDocumentKey(n.Key)
 }
-func linkKey(from, sid, to string) string {
-	return ToDocumentKey(from + sid + to)
+func linkKey(from, sid, to string, negate bool) string {
+	if negate {
+		return ToDocumentKey("-" + from + sid + to)
+	}
+	return ToDocumentKey("+" + from + sid + to)
 }
 func linkTo(n *Node) string {
 	return linkFrom(n)
 }
 
 // linkOp creates the link or executes the designated operation on the existing link
-func (s *SST) linkOp(fromID, rel, toID string, weight float64, negate bool, op linkOp) (*Link, error) {
+func (s *SST) linkOp(fromID, rel, toID string, data map[string]interface{}, weight float64, negate bool, op linkOp) (*Link, error) {
 	relKey := ToDocumentKey(rel)
 	association := s.associations[relKey]
 	if association == nil {
@@ -190,10 +197,10 @@ func (s *SST) linkOp(fromID, rel, toID string, weight float64, negate bool, op l
 		From:   fromID,
 		To:     toID,
 		SID:    association.Key,
+		Data:   data,
 		Weight: weight,
-		Negate: negate,
 	}
-	link.Key = linkKey(link.From, link.SID, link.To)
+	link.Key = linkKey(link.From, link.SID, link.To, negate)
 
 	links, err := s.linksOf(association.SemanticType)
 	if err != nil {
@@ -215,11 +222,10 @@ func (s *SST) linkOp(fromID, rel, toID string, weight float64, negate bool, op l
 		if err != nil {
 			return nil, errors.Wrapf(err, "sst: failed to read link: %v", link.Key)
 		}
-		weight, noop := op(existing.Weight, link.Weight)
+		link, noop := op(&existing, link)
 		if noop {
 			return link, nil
 		}
-		link.Weight = weight
 		_, err = links.UpdateDocument(context.TODO(), link.Key, link)
 		if err != nil {
 			return nil, errors.Wrapf(err, "sst: failed to update link: %v", link)

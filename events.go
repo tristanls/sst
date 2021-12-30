@@ -33,7 +33,7 @@ func (s *SST) NextEvents(kind, keys []string, data []map[string]interface{}) ([]
 		if s.prevEvents[0].Key != startEvent.Key {
 			// Link all the previous events in the slice
 			for j := range s.prevEvents {
-				_, err = s.CreateLink(s.prevEvents[j], "then", evnt, 1.0)
+				_, err = s.CreateLink(s.prevEvents[j], "then", evnt, nil, 1.0)
 				if err != nil {
 					return nil, errors.Wrapf(err, "sst: failed to link created event: %v with %v", evnt.Key, s.prevEvents[j].Key)
 				}

@@ -23,5 +23,5 @@ func main() {
 
 	node1 := spacetime.MustCreateNode("Node", "node1", map[string]interface{}{"description": "node1"}, 1.0)
 	node2 := spacetime.MustCreateNode("Node", "node2", map[string]interface{}{"description": "node2"}, 1.0)
-	spacetime.MustCreateLink(node1, "related", node2, 1.0)
+	spacetime.MustCreateLink(node1, "related", node2, map[string]interface{}{"description": "i'm a link!"}, 1.0)
 }

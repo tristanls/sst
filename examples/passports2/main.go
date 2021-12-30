@@ -47,7 +47,7 @@ func main() {
 	mb1 := CreatePerson(s, "markburgess_osl", "Professor Mark Burgess", 123456, 0)
 	mb2 := CreatePerson(s, "Professor Burgess", "Professor Mark Burgess", 123456, 0)
 
-	s.MustCreateLink(mb1, "alias", mb2, 0)
+	s.MustCreateLink(mb1, "alias", mb2, nil, 0)
 
 	CreateCountry(s, "USA", "United States of America")
 	CreateCountry(s, "UK", "United Kingdom")
@@ -63,7 +63,7 @@ func main() {
 	france := CreateCountry(s, "France", "France, country in Europe")
 	paris := CreateLocation(s, "Paris", "Paris, capital city in France")
 
-	s.MustCreateLink(paris, "part_of", france, 0)
+	s.MustCreateLink(paris, "part_of", france, nil, 0)
 
 	// Mark's journey as a sequential process
 
@@ -114,7 +114,7 @@ func LocationCountry(s *sst.SST, location, country string) {
 	loc := CreateLocation(s, location, "")
 	c := CreateCountry(s, country, "")
 
-	s.MustCreateLink(c, "contains", loc, 1)
+	s.MustCreateLink(c, "contains", loc, nil, 1)
 
 	fmt.Println("Location: ", loc.Key, "is in", country)
 }
@@ -128,8 +128,8 @@ func PersonLocation(s *sst.SST, person, location string) {
 
 	minihub := CreateEvent(s, short, long)
 
-	s.MustCreateLink(minihub, "happened_in", loc, 1)
-	s.MustCreateLink(minihub, "involved", prsn, 1)
+	s.MustCreateLink(minihub, "happened_in", loc, nil, 1)
+	s.MustCreateLink(minihub, "involved", prsn, nil, 1)
 
 	s.MustNextEvent(string(Event), short, map[string]interface{}{"description": long})
 	fmt.Println("Timeline: " + short)
@@ -147,7 +147,7 @@ func CountryIssuedPassport(s *sst.SST, person, country, passport string) {
 		Nfwd:         "did not grant passport to",
 		Nbwd:         "does not hold passport from",
 	})
-	s.MustCreateLink(ctry, passport, prsn, timeLimit)
+	s.MustCreateLink(ctry, passport, prsn, nil, timeLimit)
 	s.MustNextEvent(
 		string(Event),
 		country+" grants "+passport+" to "+person,
@@ -168,7 +168,7 @@ func CountryIssuedVisa(s *sst.SST, person, country, visa string) {
 		Nfwd:         "did not grant visa to",
 		Nbwd:         "does not hold visa from",
 	})
-	s.MustCreateLink(ctry, visa, prsn, timeLimit)
+	s.MustCreateLink(ctry, visa, prsn, nil, timeLimit)
 	s.MustNextEvent(
 		string(Event),
 		country+" grants "+visa+" to "+person,

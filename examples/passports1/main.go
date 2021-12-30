@@ -35,7 +35,7 @@ func main() {
 	CountryIssuedVisa(s, "Emily", "France", "Schengen work visa")
 	PersonLocation(s, "Emily", "Paris")
 
-	s.MustCreateLink(paris, "part_of", france, 100)
+	s.MustCreateLink(paris, "part_of", france, nil, 100)
 
 	CountryIssuedVisa(s, "Captain Evil", "USA", "Work Visa")
 	PersonLocation(s, "Captain Evil", "UK")
@@ -61,7 +61,7 @@ func CountryIssuedPassport(s *sst.SST, person, location, passport string) {
 		Nfwd:         "did not grant passport to",
 		Nbwd:         "does not hold passport from",
 	})
-	s.MustCreateLink(countryHub, passport, personFrag, timeLimit)
+	s.MustCreateLink(countryHub, passport, personFrag, nil, timeLimit)
 	s.MustNextEvent(
 		"Node",
 		location+" grants "+passport+" to "+person,
@@ -82,7 +82,7 @@ func CountryIssuedVisa(s *sst.SST, person, location, visa string) {
 		Nfwd:         "did not grant visa to",
 		Nbwd:         "does not hold visa from",
 	})
-	s.MustCreateLink(countryHub, visa, personFrag, timeLimit)
+	s.MustCreateLink(countryHub, visa, personFrag, nil, timeLimit)
 	s.MustNextEvent(
 		"Node",
 		location+" grants "+visa+" to "+person,

@@ -19,7 +19,7 @@ type Node struct {
 	// Key is a mandatory field - short name
 	Key string `json:"_key"`
 	// Data is an arbitrary key value data structure serializable to JSON
-	Data map[string]interface{} `json:"data"`
+	Data map[string]interface{} `json:"data,omitempty"`
 	// Prefix designates node collection origin
 	Prefix string
 	// Weight is the importance rank
