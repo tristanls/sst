@@ -44,6 +44,21 @@ func (s *SST) MustBlockLink(from *Node, rel string, to *Node, weight float64) *L
 	return link
 }
 
+// BlockLinkByID creates the negation of link if it does not exist or updates
+// existing link negated with the new weight. It uses node IDs to designate link endpoints.
+func (s *SST) BlockLinkByID(fromID, rel, toID string, weight float64) (*Link, error) {
+	return s.addLink(fromID, rel, toID, weight, true)
+}
+
+// MustBlockLinkByID invokes BlockLinkByID, but panics on error
+func (s *SST) MustBlockLinkByID(fromID, rel, toID string, weight float64) *Link {
+	link, err := s.BlockLinkByID(fromID, rel, toID, weight)
+	if err != nil {
+		panic(err)
+	}
+	return link
+}
+
 // CreateLink creates the link if it does not exist or updates existing link
 // with the new weight.
 func (s *SST) CreateLink(from *Node, rel string, to *Node, weight float64) (*Link, error) {
