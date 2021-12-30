@@ -21,16 +21,7 @@ func main() {
 		panic(err)
 	}
 
-	node1, err := spacetime.CreateNode("Node", "node1", map[string]interface{}{"description": "node1"}, 1.0)
-	if err != nil {
-		panic(err)
-	}
-	node2, err := spacetime.CreateNode("Node", "node2", map[string]interface{}{"description": "node2"}, 1.0)
-	if err != nil {
-		panic(err)
-	}
-	err = spacetime.CreateLink(node1, "related", node2, 1.0)
-	if err != nil {
-		panic(err)
-	}
+	node1 := spacetime.MustCreateNode("Node", "node1", map[string]interface{}{"description": "node1"}, 1.0)
+	node2 := spacetime.MustCreateNode("Node", "node2", map[string]interface{}{"description": "node2"}, 1.0)
+	spacetime.MustCreateLink(node1, "related", node2, 1.0)
 }

@@ -31,30 +31,32 @@ type Link struct {
 
 // BlockLink creates the negation of the link if it does not exist or updates
 // existing negated link with the new weight.
-func (s *SST) BlockLink(c1 *Node, rel string, c2 *Node, weight float64) error {
+func (s *SST) BlockLink(c1 *Node, rel string, c2 *Node, weight float64) (*Link, error) {
 	return s.addLink(c1, rel, c2, weight, true)
 }
 
 // MustBlockLink invokes BlockLink, but panics on error
-func (s *SST) MustBlockLink(c1 *Node, rel string, c2 *Node, weight float64) {
-	err := s.BlockLink(c1, rel, c2, weight)
+func (s *SST) MustBlockLink(c1 *Node, rel string, c2 *Node, weight float64) *Link {
+	link, err := s.BlockLink(c1, rel, c2, weight)
 	if err != nil {
 		panic(err)
 	}
+	return link
 }
 
 // CreateLink creates the link if it does not exist or updates existing link
 // with the new weight.
-func (s *SST) CreateLink(c1 *Node, rel string, c2 *Node, weight float64) error {
+func (s *SST) CreateLink(c1 *Node, rel string, c2 *Node, weight float64) (*Link, error) {
 	return s.addLink(c1, rel, c2, weight, false)
 }
 
 // MustCreateLink invokes CreateLink, but panics on error
-func (s *SST) MustCreateLink(c1 *Node, rel string, c2 *Node, weight float64) {
-	err := s.CreateLink(c1, rel, c2, weight)
+func (s *SST) MustCreateLink(c1 *Node, rel string, c2 *Node, weight float64) *Link {
+	link, err := s.CreateLink(c1, rel, c2, weight)
 	if err != nil {
 		panic(err)
 	}
+	return link
 }
 
 // DeleteLink deletes the link if it exists.
@@ -86,16 +88,17 @@ func (s *SST) MustDeleteLink(c1 *Node, rel string, c2 *Node) {
 
 // IncrementLink creates the link with weight 1.0 if it does not exist or increments
 // the weight of existing link by 1.0.
-func (s *SST) IncrementLink(c1 *Node, rel string, c2 *Node) error {
+func (s *SST) IncrementLink(c1 *Node, rel string, c2 *Node) (*Link, error) {
 	return s.linkOp(c1, rel, c2, 0.0, false, incrLinkOp)
 }
 
 // MustIncrementLink invokes IncrementLink, but panics on error
-func (s *SST) MustIncrementLink(c1 *Node, rel string, c2 *Node) {
-	err := s.IncrementLink(c1, rel, c2)
+func (s *SST) MustIncrementLink(c1 *Node, rel string, c2 *Node) *Link {
+	link, err := s.IncrementLink(c1, rel, c2)
 	if err != nil {
 		panic(err)
 	}
+	return link
 }
 
 // linksOf identifies links collection based on SemanticType needed
@@ -117,7 +120,7 @@ func (s *SST) linksOf(typ SemanticType) (arango.Collection, error) {
 }
 
 // addLink adds the link idempotently.
-func (s *SST) addLink(c1 *Node, rel string, c2 *Node, weight float64, negate bool) error {
+func (s *SST) addLink(c1 *Node, rel string, c2 *Node, weight float64, negate bool) (*Link, error) {
 	return s.linkOp(c1, rel, c2, weight, negate, addLinkOp)
 }
 
@@ -147,11 +150,11 @@ func linkTo(n *Node) string {
 }
 
 // linkOp creates the link or executes the designated operation on the existing link
-func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool, op linkOp) error {
+func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool, op linkOp) (*Link, error) {
 	relKey := ToDocumentKey(rel)
 	association := s.associations[relKey]
 	if association == nil {
-		return errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
+		return nil, errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
 	}
 	link := &Link{
 		From:   linkFrom(c1),
@@ -164,35 +167,35 @@ func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool
 
 	links, err := s.linksOf(association.SemanticType)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	exists, err := links.DocumentExists(context.TODO(), link.Key)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !exists {
 		_, err := links.CreateDocument(context.TODO(), link)
 		if err != nil {
-			return errors.Wrapf(err, "sst: failed to add new link: %v", link)
+			return nil, errors.Wrapf(err, "sst: failed to add new link: %v", link)
 		}
 	} else {
 		var existing Link
 		_, err := links.ReadDocument(context.TODO(), link.Key, &existing)
 		if err != nil {
-			return errors.Wrapf(err, "sst: failed to read link: %v", link.Key)
+			return nil, errors.Wrapf(err, "sst: failed to read link: %v", link.Key)
 		}
 		weight, noop := op(existing.Weight, link.Weight)
 		if noop {
-			return nil
+			return link, nil
 		}
 		link.Weight = weight
 		_, err = links.UpdateDocument(context.TODO(), link.Key, link)
 		if err != nil {
-			return errors.Wrapf(err, "sst: failed to update link: %v", link)
+			return nil, errors.Wrapf(err, "sst: failed to update link: %v", link)
 		}
 	}
-	return nil
+	return link, nil
 }
 
 // LinkID returns the ArangoDB _id for a link
