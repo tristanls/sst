@@ -10,6 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	nilNode = errors.New("sst: node is nil")
+)
+
 // Node represents a vertex of a Semantic Spacetime graph
 type Node struct {
 	// Key is a mandatory field - short name
@@ -110,4 +114,17 @@ func (s *SST) collectionOf(prefix string) (arango.Collection, error) {
 		return nil, errors.New(fmt.Sprintf("sst: no node collection for prefix: %v", prefix))
 	}
 	return col, nil
+}
+
+// NodeID returns the ArangoDB _id for a node
+func NodeID(node *Node) (string, error) {
+	if node == nil {
+		return "", nilNode
+	}
+	return MustNodeID(node), nil
+}
+
+// MustNodeID returns the ArangoDB _id for a node, panics on error
+func MustNodeID(node *Node) string {
+	return node.Prefix + node.Key
 }

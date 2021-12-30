@@ -8,6 +8,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	nilLink            = errors.New("sst: link is nil")
+	unknownAssociation = errors.New("sst: unknown association")
+)
+
 // Link represents an edge of a Semantic Spacetime graph
 type Link struct {
 	// Key is a mandatory field - short name
@@ -188,4 +193,16 @@ func (s *SST) linkOp(c1 *Node, rel string, c2 *Node, weight float64, negate bool
 		}
 	}
 	return nil
+}
+
+// LinkID returns the ArangoDB _id for a link
+func (s *SST) LinkID(link *Link) (string, error) {
+	if link == nil {
+		return "", nilLink
+	}
+	a := s.associations[link.SID]
+	if a == nil {
+		return "", unknownAssociation
+	}
+	return a.SemanticType.String() + "/" + a.Key, nil
 }
