@@ -237,5 +237,18 @@ func (s *SST) LinkID(link *Link) (string, error) {
 	if a == nil {
 		return "", unknownAssociation
 	}
-	return a.SemanticType.String() + "/" + a.Key, nil
+	return a.SemanticType.String() + "/" + link.Key, nil
+}
+
+// LinkIDWith returns the ArangoDB _id for a link using provided SemanticType
+func (s *SST) LinkIDWith(link *Link, sType SemanticType) (string, error) {
+	if link == nil {
+		return "", nilLink
+	}
+	return s.MustLinkIDWith(link, sType), nil
+}
+
+// MustLinkIDWith returns the ArangoDB _id for a link using provided SemanticType, but panics on error
+func (s *SST) MustLinkIDWith(link *Link, sType SemanticType) string {
+	return sType.String() + "/" + link.Key
 }
