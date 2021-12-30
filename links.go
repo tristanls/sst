@@ -32,7 +32,7 @@ type Link struct {
 // BlockLink creates the negation of the link if it does not exist or updates
 // existing negated link with the new weight.
 func (s *SST) BlockLink(from *Node, rel string, to *Node, weight float64) (*Link, error) {
-	return s.addLink(from, rel, to, weight, true)
+	return s.addLink(linkFrom(from), rel, linkTo(to), weight, true)
 }
 
 // MustBlockLink invokes BlockLink, but panics on error
@@ -47,12 +47,27 @@ func (s *SST) MustBlockLink(from *Node, rel string, to *Node, weight float64) *L
 // CreateLink creates the link if it does not exist or updates existing link
 // with the new weight.
 func (s *SST) CreateLink(from *Node, rel string, to *Node, weight float64) (*Link, error) {
-	return s.addLink(from, rel, to, weight, false)
+	return s.CreateLinkByID(linkFrom(from), rel, linkTo(to), weight)
 }
 
 // MustCreateLink invokes CreateLink, but panics on error
 func (s *SST) MustCreateLink(from *Node, rel string, to *Node, weight float64) *Link {
 	link, err := s.CreateLink(from, rel, to, weight)
+	if err != nil {
+		panic(err)
+	}
+	return link
+}
+
+// CreateLinkByID creates the link if it does not exist or updates existing link
+// with the new weight. It uses node IDs to designate link endpoints.
+func (s *SST) CreateLinkByID(fromID, rel, toID string, weight float64) (*Link, error) {
+	return s.addLink(fromID, rel, toID, weight, false)
+}
+
+// MustCreateLinkByID invokes CreateLinkByID, but panics on error
+func (s *SST) MustCreateLinkByID(fromID, rel, toID string, weight float64) *Link {
+	link, err := s.CreateLinkByID(fromID, rel, toID, weight)
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +104,7 @@ func (s *SST) MustDeleteLink(from *Node, rel string, to *Node) {
 // IncrementLink creates the link with weight 1.0 if it does not exist or increments
 // the weight of existing link by 1.0.
 func (s *SST) IncrementLink(from *Node, rel string, to *Node) (*Link, error) {
-	return s.linkOp(from, rel, to, 0.0, false, incrLinkOp)
+	return s.linkOp(linkFrom(from), rel, linkTo(to), 0.0, false, incrLinkOp)
 }
 
 // MustIncrementLink invokes IncrementLink, but panics on error
@@ -120,8 +135,8 @@ func (s *SST) linksOf(typ SemanticType) (arango.Collection, error) {
 }
 
 // addLink adds the link idempotently.
-func (s *SST) addLink(from *Node, rel string, to *Node, weight float64, negate bool) (*Link, error) {
-	return s.linkOp(from, rel, to, weight, negate, addLinkOp)
+func (s *SST) addLink(fromID, rel, toID string, weight float64, negate bool) (*Link, error) {
+	return s.linkOp(fromID, rel, toID, weight, negate, addLinkOp)
 }
 
 // addLinkOp determines link weight when adding a link. Returns weight and noop flag.
@@ -150,15 +165,15 @@ func linkTo(n *Node) string {
 }
 
 // linkOp creates the link or executes the designated operation on the existing link
-func (s *SST) linkOp(from *Node, rel string, to *Node, weight float64, negate bool, op linkOp) (*Link, error) {
+func (s *SST) linkOp(fromID, rel, toID string, weight float64, negate bool, op linkOp) (*Link, error) {
 	relKey := ToDocumentKey(rel)
 	association := s.associations[relKey]
 	if association == nil {
 		return nil, errors.New(fmt.Sprintf("sst: invalid link type: %v", relKey))
 	}
 	link := &Link{
-		From:   linkFrom(from),
-		To:     linkTo(to),
+		From:   fromID,
+		To:     toID,
 		SID:    association.Key,
 		Weight: weight,
 		Negate: negate,
