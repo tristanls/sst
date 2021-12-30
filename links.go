@@ -236,28 +236,28 @@ func (s *SST) linkOp(fromID, rel, toID string, data map[string]interface{}, weig
 }
 
 // LinkNegated returns true if the link is negated, false otherwise.
-func (s *SST) LinkNegated(link *Link) (bool, error) {
+func LinkNegated(link *Link) (bool, error) {
 	if link == nil {
 		return false, nilLink
 	}
-	return s.LinkKeyNegated(link.Key)
+	return LinkKeyNegated(link.Key)
 }
 
 // MustLinkNegated returns true if the link is negated, false otherwise, panics on error.
-func (s *SST) MustLinkNegated(link *Link) bool {
-	return s.MustLinkKeyNegated(link.Key)
+func MustLinkNegated(link *Link) bool {
+	return MustLinkKeyNegated(link.Key)
 }
 
 // LinkKeyNegated returns true if the link key is negated, false otherwise.
-func (s *SST) LinkKeyNegated(key string) (bool, error) {
+func LinkKeyNegated(key string) (bool, error) {
 	if len(key) < 2 {
 		return false, invalidLinkKey
 	}
-	return s.MustLinkKeyNegated(key), nil
+	return MustLinkKeyNegated(key), nil
 }
 
 // MustLinkKeyNegated returns true if the link key is negated, false otherwise, panics on error.
-func (s *SST) MustLinkKeyNegated(key string) bool {
+func MustLinkKeyNegated(key string) bool {
 	return key[0:1] == "-"
 }
 
