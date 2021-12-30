@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	invalidLinkKey     = errors.New("sst: invalid link key")
 	nilLink            = errors.New("sst: link is nil")
 	unknownAssociation = errors.New("sst: unknown association")
 )
@@ -232,6 +233,32 @@ func (s *SST) linkOp(fromID, rel, toID string, data map[string]interface{}, weig
 		}
 	}
 	return link, nil
+}
+
+// LinkNegated returns true if the link is negated, false otherwise.
+func (s *SST) LinkNegated(link *Link) (bool, error) {
+	if link == nil {
+		return false, nilLink
+	}
+	return s.LinkKeyNegated(link.Key)
+}
+
+// MustLinkNegated returns true if the link is negated, false otherwise, panics on error.
+func (s *SST) MustLinkNegated(link *Link) bool {
+	return s.MustLinkKeyNegated(link.Key)
+}
+
+// LinkKeyNegated returns true if the link key is negated, false otherwise.
+func (s *SST) LinkKeyNegated(key string) (bool, error) {
+	if len(key) < 2 {
+		return false, invalidLinkKey
+	}
+	return s.MustLinkKeyNegated(key), nil
+}
+
+// MustLinkKeyNegated returns true if the link key is negated, false otherwise, panics on error.
+func (s *SST) MustLinkKeyNegated(key string) bool {
+	return key[0:1] == "-"
 }
 
 // LinkID returns the ArangoDB _id for a link
