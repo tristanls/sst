@@ -12,5 +12,5 @@ func TestThing(t *testing.T) {
 }
 
 func TestToDocumentKey(t *testing.T) {
-	assert.Equal(t, "Number_12345", toDocumentKey("Number 12345"))
+	assert.Equal(t, "Number_12345", ToDocumentKey("Number 12345"))
 }
